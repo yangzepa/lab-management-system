@@ -10,6 +10,7 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  useDroppable,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { tasksApi, userApi } from '@/services/api';
@@ -53,6 +54,58 @@ const columns = [
     icon: '🚫'
   },
 ];
+
+// Droppable Column Component
+function DroppableColumn({
+  id,
+  children,
+  column,
+  taskCount,
+}: {
+  id: string;
+  children: React.ReactNode;
+  column: typeof columns[0];
+  taskCount: number;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="flex flex-col h-full"
+    >
+      {/* Column Header */}
+      <div className={`bg-gradient-to-r ${column.color} rounded-t-xl border ${column.borderColor} px-4 py-3 shadow-sm`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{column.icon}</span>
+            <h3 className="font-bold text-gray-800 text-sm">{column.title}</h3>
+          </div>
+          <motion.span
+            key={taskCount}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="bg-white px-2.5 py-1 rounded-full text-sm font-bold text-gray-700 shadow-sm"
+          >
+            {taskCount}
+          </motion.span>
+        </div>
+      </div>
+
+      {/* Droppable Area */}
+      <div
+        className={`flex-1 bg-gray-50/50 rounded-b-xl p-3 transition-all duration-200 min-h-[500px] border-x border-b ${column.borderColor} ${
+          isOver ? 'ring-2 ring-blue-400 ring-offset-2' : ''
+        }`}
+      >
+        {children}
+      </div>
+    </motion.div>
+  );
+}
 
 export default function KanbanBoard({ projectId }: Props) {
   const user = useAuthStore((state) => state.user);
@@ -239,65 +292,36 @@ export default function KanbanBoard({ projectId }: Props) {
             const taskIds = columnTasks.map((task) => task.id);
 
             return (
-              <motion.div
-                key={column.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col h-full"
-              >
-                {/* Column Header */}
-                <div className={`bg-gradient-to-r ${column.color} rounded-t-xl border ${column.borderColor} px-4 py-3 shadow-sm`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{column.icon}</span>
-                      <h3 className="font-bold text-gray-800 text-sm">{column.title}</h3>
-                    </div>
-                    <motion.span
-                      key={columnTasks.length}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="bg-white px-2.5 py-1 rounded-full text-sm font-bold text-gray-700 shadow-sm"
-                    >
-                      {columnTasks.length}
-                    </motion.span>
-                  </div>
-                </div>
-
-                {/* Droppable Area */}
-                <SortableContext items={taskIds} strategy={verticalListSortingStrategy} id={column.id}>
-                  <div
-                    className={`flex-1 bg-gray-50/50 rounded-b-xl p-3 transition-all duration-200 min-h-[500px] border-x border-b ${column.borderColor}`}
-                  >
-                    <AnimatePresence mode="popLayout">
-                      {columnTasks.length === 0 ? (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex flex-col items-center justify-center h-full text-gray-400 py-8"
-                        >
-                          <div className="text-4xl mb-2">{column.icon}</div>
-                          <p className="text-sm text-center">No tasks yet</p>
-                          <p className="text-xs text-center mt-1">Drag tasks here or click + to add</p>
-                        </motion.div>
-                      ) : (
-                        <div className="space-y-2">
-                          {columnTasks.map((task) => (
-                            <SortableTaskCard
-                              key={task.id}
-                              task={task}
-                              onClick={() => handleTaskClick(task)}
-                              onDelete={handleDeleteTask}
-                              onComplete={handleCompleteTask}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+              <DroppableColumn key={column.id} id={column.id} column={column} taskCount={columnTasks.length}>
+                <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+                  <AnimatePresence mode="popLayout">
+                    {columnTasks.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex flex-col items-center justify-center h-full text-gray-400 py-8"
+                      >
+                        <div className="text-4xl mb-2">{column.icon}</div>
+                        <p className="text-sm text-center">No tasks yet</p>
+                        <p className="text-xs text-center mt-1">Drag tasks here or click + to add</p>
+                      </motion.div>
+                    ) : (
+                      <div className="space-y-2">
+                        {columnTasks.map((task) => (
+                          <SortableTaskCard
+                            key={task.id}
+                            task={task}
+                            onClick={() => handleTaskClick(task)}
+                            onDelete={handleDeleteTask}
+                            onComplete={handleCompleteTask}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </AnimatePresence>
                 </SortableContext>
-              </motion.div>
+              </DroppableColumn>
             );
           })}
         </div>

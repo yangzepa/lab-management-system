@@ -129,11 +129,13 @@ npm run build
 
 ### Admin 계정
 - **Username**: admin
-- **Password**: admin123!
+- **Password**: demo123
 
-### 연구원 계정
-- **Username**: park / choi / hwang / kim.b / kang / kim.k
-- **Password**: password123!
+### Sample User 계정
+- **Username**: user1 / user2 / user3 / user4 / user5 / user6
+- **Password**: demo123
+
+**⚠️ 주의**: 프로덕션 환경에서는 반드시 비밀번호를 변경하세요!
 
 ## 📁 프로젝트 구조
 
@@ -214,10 +216,6 @@ labwebpage/
 ## 👥 개발자
 
 순천향대학교 Efficient Computing Lab (효율컴퓨팅 연구실)
-- **Professor**: 양제파
-- **Contact**: yangzepa@gmail.com
-- **Phone**: 010-8888-9849
-- **Location**: 공과대학 멀티미디어동 M606호
 
 ---
 

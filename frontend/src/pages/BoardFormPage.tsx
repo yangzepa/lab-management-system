@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Save, Upload, X } from 'lucide-react';
+import { ArrowLeft, Save, Upload, X, FileText, File as FileIcon } from 'lucide-react';
 import { userBoardsApi, fileUploadApi } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 
@@ -9,12 +9,12 @@ export default function BoardFormPage() {
   const { id } = useParams<{ id: string }>();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>('');
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string>('');
+  const [fileName, setFileName] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isEditMode = Boolean(id && id !== 'new');
@@ -46,8 +46,10 @@ export default function BoardFormPage() {
       setTitle(board.title);
       setContent(board.content);
       if (board.imageUrl) {
-        setImageUrl(board.imageUrl);
-        setImagePreview(board.imageUrl);
+        setFileUrl(board.imageUrl);
+        // Extract filename from URL
+        const urlParts = board.imageUrl.split('/');
+        setFileName(urlParts[urlParts.length - 1]);
       }
     } catch (error) {
       console.error('Failed to load board:', error);
@@ -58,37 +60,53 @@ export default function BoardFormPage() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      setUploadingImage(true);
+    // 파일 크기 제한 (10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('파일 크기는 10MB를 초과할 수 없습니다.');
+      return;
+    }
 
-      // 이미지 미리보기
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    try {
+      setUploadingFile(true);
 
       // 서버에 업로드
       const uploadedUrl = await fileUploadApi.uploadImage(file);
-      setImageUrl(uploadedUrl);
-      setImageFile(file);
+      setFileUrl(uploadedUrl);
+      setFileName(file.name);
+      setAttachedFile(file);
     } catch (error) {
-      console.error('Failed to upload image:', error);
-      alert('이미지 업로드에 실패했습니다.');
-      setImagePreview('');
+      console.error('Failed to upload file:', error);
+      alert('파일 업로드에 실패했습니다.');
     } finally {
-      setUploadingImage(false);
+      setUploadingFile(false);
     }
   };
 
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImageUrl('');
-    setImagePreview('');
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    setFileUrl('');
+    setFileName('');
+  };
+
+  const getFileIcon = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+    if (imageExts.includes(ext || '')) {
+      return <FileIcon className="w-8 h-8 text-blue-500" />;
+    }
+    return <FileText className="w-8 h-8 text-gray-500" />;
+  };
+
+  const isImageFile = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+    return imageExts.includes(ext || '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,7 +129,7 @@ export default function BoardFormPage() {
         title,
         content,
         isPublic: false, // 모든 게시글은 연구실 멤버만 볼 수 있음
-        imageUrl: imageUrl || undefined,
+        imageUrl: fileUrl || undefined, // 파일 URL (이미지 및 기타 파일)
       };
 
       if (isEditMode) {
@@ -202,43 +220,69 @@ export default function BoardFormPage() {
             </p>
           </div>
 
-          {/* Image Upload */}
+          {/* File Upload */}
           <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              첨부 이미지
+              첨부 파일
             </label>
 
-            {imagePreview ? (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="미리보기"
-                  className="max-w-full h-auto rounded-lg border border-gray-300"
-                  style={{ maxHeight: '400px' }}
-                />
-                <button
-                  type="button"
-                  onClick={handleRemoveImage}
-                  className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            {fileName && fileUrl ? (
+              <div className="border border-gray-300 rounded-lg p-4">
+                {isImageFile(fileName) ? (
+                  // 이미지 파일인 경우 미리보기 표시
+                  <div className="relative">
+                    <img
+                      src={fileUrl}
+                      alt="미리보기"
+                      className="max-w-full h-auto rounded-lg border border-gray-300"
+                      style={{ maxHeight: '400px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  // 일반 파일인 경우 파일 정보 표시
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {getFileIcon(fileName)}
+                      <div>
+                        <p className="font-medium text-gray-900">{fileName}</p>
+                        {attachedFile && (
+                          <p className="text-sm text-gray-500">
+                            {(attachedFile.size / 1024).toFixed(2)} KB
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <input
                   type="file"
-                  id="image-upload"
-                  accept="image/*"
-                  onChange={handleImageUpload}
+                  id="file-upload"
+                  onChange={handleFileUpload}
                   className="hidden"
-                  disabled={uploadingImage}
+                  disabled={uploadingFile}
                 />
                 <label
-                  htmlFor="image-upload"
+                  htmlFor="file-upload"
                   className="cursor-pointer flex flex-col items-center"
                 >
-                  {uploadingImage ? (
+                  {uploadingFile ? (
                     <>
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-3"></div>
                       <p className="text-gray-600">업로드 중...</p>
@@ -246,9 +290,9 @@ export default function BoardFormPage() {
                   ) : (
                     <>
                       <Upload className="w-12 h-12 text-gray-400 mb-3" />
-                      <p className="text-gray-600">클릭하여 이미지 업로드</p>
+                      <p className="text-gray-600">클릭하여 파일 업로드</p>
                       <p className="text-sm text-gray-500 mt-1">
-                        모든 이미지 형식 지원
+                        모든 파일 형식 지원 (최대 10MB)
                       </p>
                     </>
                   )}
@@ -300,7 +344,7 @@ export default function BoardFormPage() {
             <li>• 제목은 명확하고 간결하게 작성해주세요.</li>
             <li>• 내용은 자유롭게 작성하되, 상대방을 존중하는 표현을 사용해주세요.</li>
             <li>• 모든 게시글은 연구실 멤버만 확인할 수 있습니다.</li>
-            <li>• 이미지 파일을 첨부할 수 있습니다.</li>
+            <li>• 파일을 첨부할 수 있습니다 (최대 10MB, 모든 형식 지원).</li>
             <li>• 작성 후 수정 및 삭제가 가능합니다.</li>
           </ul>
         </motion.div>
