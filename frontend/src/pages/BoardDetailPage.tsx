@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Eye, Calendar, User, Edit, Trash2, MessageSquare, Send } from 'lucide-react';
+import { ArrowLeft, Eye, Calendar, User, Edit, Trash2, MessageSquare, Send, Download, FileText } from 'lucide-react';
 import { userBoardsApi } from '@/services/api';
 import type { Board, BoardComment } from '@/types';
 import { useAuthStore } from '@/store/authStore';
@@ -104,6 +104,16 @@ export default function BoardDetailPage() {
     setEditingCommentContent(comment.content);
   };
 
+  const isImageFile = (url: string) => {
+    const ext = url.split('.').pop()?.toLowerCase();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+    return imageExts.includes(ext || '');
+  };
+
+  const getFileName = () => {
+    return board?.attachmentName || board?.imageUrl?.split('/').pop() || 'file';
+  };
+
   if (loading || !board) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -180,17 +190,101 @@ export default function BoardDetailPage() {
               {board.content}
             </div>
 
-            {/* Attached Image */}
-            {board.imageUrl && (
+            {/* Attached Files */}
+            {(board.attachments && board.attachments.length > 0) || board.imageUrl ? (
               <div className="mt-6">
-                <img
-                  src={board.imageUrl}
-                  alt="첨부 이미지"
-                  className="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm"
-                  style={{ maxHeight: '600px' }}
-                />
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                  첨부 파일 {board.attachments ? `(${board.attachments.length}개)` : ''}
+                </h3>
+                <div className="space-y-3">
+                  {board.attachments && board.attachments.length > 0 ? (
+                    // 여러 파일 표시
+                    board.attachments.map((attachment, index) => (
+                      <div key={index}>
+                        {isImageFile(attachment.url) ? (
+                          // 이미지 파일인 경우 미리보기
+                          <div>
+                            <img
+                              src={attachment.url}
+                              alt={attachment.name}
+                              className="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm"
+                              style={{ maxHeight: '600px' }}
+                            />
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-sm text-gray-600">{attachment.name}</p>
+                              <a
+                                href={attachment.url}
+                                download
+                                className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                다운로드
+                              </a>
+                            </div>
+                          </div>
+                        ) : (
+                          // 일반 파일인 경우 다운로드 링크
+                          <div className="flex items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <FileText className="w-8 h-8 text-gray-500 mr-3" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                              <p className="text-xs text-gray-500">첨부파일</p>
+                            </div>
+                            <a
+                              href={attachment.url}
+                              download
+                              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              다운로드
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : board.imageUrl ? (
+                    // 단일 파일 표시 (하위 호환성)
+                    isImageFile(board.imageUrl) ? (
+                      <div>
+                        <img
+                          src={board.imageUrl}
+                          alt="첨부 이미지"
+                          className="max-w-full h-auto rounded-lg border border-gray-200 shadow-sm"
+                          style={{ maxHeight: '600px' }}
+                        />
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-sm text-gray-600">{getFileName()}</p>
+                          <a
+                            href={board.imageUrl}
+                            download
+                            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            다운로드
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <FileText className="w-8 h-8 text-gray-500 mr-3" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{getFileName()}</p>
+                          <p className="text-xs text-gray-500">첨부파일</p>
+                        </div>
+                        <a
+                          href={board.imageUrl}
+                          download
+                          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          다운로드
+                        </a>
+                      </div>
+                    )
+                  ) : null}
+                </div>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Actions */}

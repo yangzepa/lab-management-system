@@ -38,6 +38,10 @@ public class Board {
     @Column(name = "attachment_name")
     private String attachmentName;
 
+    // JSON 배열로 여러 파일 저장: [{"url": "...", "name": "..."}]
+    @Column(name = "attachments", columnDefinition = "TEXT")
+    private String attachments;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
     private Researcher author;

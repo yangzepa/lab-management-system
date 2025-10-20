@@ -144,6 +144,11 @@ export interface Notice {
   updatedAt: string;
 }
 
+export interface BoardAttachment {
+  url: string;
+  name: string;
+}
+
 export interface Board {
   id: number;
   title: string;
@@ -152,6 +157,7 @@ export interface Board {
   imageUrl?: string;
   attachmentUrl?: string;
   attachmentName?: string;
+  attachments?: BoardAttachment[]; // 여러 파일
   authorId: number;
   authorName: string;
   viewCount: number;

@@ -22,4 +22,5 @@ public class CreateBoardRequest {
     private String imageUrl;
     private String attachmentUrl;
     private String attachmentName;
+    private String attachments; // JSON 배열로 여러 파일
 }

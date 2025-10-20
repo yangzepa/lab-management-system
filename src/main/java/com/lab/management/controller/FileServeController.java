@@ -16,7 +16,7 @@ import java.nio.file.Paths;
 
 @Slf4j
 @RestController
-@RequestMapping("/files")
+@RequestMapping("/api/files")
 @CrossOrigin(origins = "*")
 public class FileServeController {
 

@@ -4,14 +4,13 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Save, Upload, X, FileText, File as FileIcon } from 'lucide-react';
 import { userBoardsApi, fileUploadApi } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import type { BoardAttachment } from '@/types';
 
 export default function BoardFormPage() {
   const { id } = useParams<{ id: string }>();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
-  const [fileUrl, setFileUrl] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('');
+  const [attachments, setAttachments] = useState<BoardAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -45,11 +44,16 @@ export default function BoardFormPage() {
 
       setTitle(board.title);
       setContent(board.content);
-      if (board.imageUrl) {
-        setFileUrl(board.imageUrl);
-        // Extract filename from URL
-        const urlParts = board.imageUrl.split('/');
-        setFileName(urlParts[urlParts.length - 1]);
+
+      // 여러 파일 로드
+      if (board.attachments && board.attachments.length > 0) {
+        setAttachments(board.attachments);
+      } else if (board.imageUrl) {
+        // 기존 단일 파일 호환성
+        setAttachments([{
+          url: board.imageUrl,
+          name: board.attachmentName || board.imageUrl.split('/').pop() || 'file'
+        }]);
       }
     } catch (error) {
       console.error('Failed to load board:', error);
@@ -61,29 +65,36 @@ export default function BoardFormPage() {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     try {
       setUploadingFile(true);
 
-      // 서버에 업로드
-      const uploadedUrl = await fileUploadApi.uploadImage(file);
-      setFileUrl(uploadedUrl);
-      setFileName(file.name);
-      setAttachedFile(file);
+      // 여러 파일 업로드
+      const uploadPromises = Array.from(files).map(file =>
+        fileUploadApi.uploadFile(file)
+      );
+
+      const results = await Promise.all(uploadPromises);
+      const newAttachments = results.map(result => ({
+        url: result.fileUrl,
+        name: result.originalName
+      }));
+
+      setAttachments([...attachments, ...newAttachments]);
     } catch (error) {
-      console.error('Failed to upload file:', error);
+      console.error('Failed to upload files:', error);
       alert('파일 업로드에 실패했습니다.');
     } finally {
       setUploadingFile(false);
+      // Reset input
+      e.target.value = '';
     }
   };
 
-  const handleRemoveFile = () => {
-    setAttachedFile(null);
-    setFileUrl('');
-    setFileName('');
+  const handleRemoveFile = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
   };
 
   const getFileIcon = (filename: string) => {
@@ -122,7 +133,9 @@ export default function BoardFormPage() {
         title,
         content,
         isPublic: false, // 모든 게시글은 연구실 멤버만 볼 수 있음
-        imageUrl: fileUrl || undefined, // 파일 URL (이미지 및 기타 파일)
+        imageUrl: attachments.length > 0 ? attachments[0].url : undefined, // 첫 번째 파일 URL (하위 호환성)
+        attachmentName: attachments.length > 0 ? attachments[0].name : undefined, // 첫 번째 파일명 (하위 호환성)
+        attachments: attachments.length > 0 ? JSON.stringify(attachments) : undefined, // 여러 파일 JSON 배열
       };
 
       if (isEditMode) {
@@ -216,82 +229,87 @@ export default function BoardFormPage() {
           {/* File Upload */}
           <div className="mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              첨부 파일
+              첨부 파일 {attachments.length > 0 && `(${attachments.length}개)`}
             </label>
 
-            {fileName && fileUrl ? (
-              <div className="border border-gray-300 rounded-lg p-4">
-                {isImageFile(fileName) ? (
-                  // 이미지 파일인 경우 미리보기 표시
-                  <div className="relative">
-                    <img
-                      src={fileUrl}
-                      alt="미리보기"
-                      className="max-w-full h-auto rounded-lg border border-gray-300"
-                      style={{ maxHeight: '400px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveFile}
-                      className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  // 일반 파일인 경우 파일 정보 표시
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {getFileIcon(fileName)}
-                      <div>
-                        <p className="font-medium text-gray-900">{fileName}</p>
-                        {attachedFile && (
-                          <p className="text-sm text-gray-500">
-                            {(attachedFile.size / 1024).toFixed(2)} KB
-                          </p>
-                        )}
+            {/* 업로드된 파일 목록 */}
+            {attachments.length > 0 && (
+              <div className="space-y-3 mb-4">
+                {attachments.map((attachment, index) => (
+                  <div key={index} className="border border-gray-300 rounded-lg p-4">
+                    {isImageFile(attachment.name) ? (
+                      // 이미지 파일인 경우 미리보기 표시
+                      <div className="relative">
+                        <img
+                          src={attachment.url}
+                          alt={attachment.name}
+                          className="max-w-full h-auto rounded-lg border border-gray-300"
+                          style={{ maxHeight: '400px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(index)}
+                          className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <p className="text-sm text-gray-600 mt-2">{attachment.name}</p>
                       </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemoveFile}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
+                    ) : (
+                      // 일반 파일인 경우 파일 정보 표시
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          {getFileIcon(attachment.name)}
+                          <div>
+                            <p className="font-medium text-gray-900">{attachment.name}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(index)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <input
-                  type="file"
-                  id="file-upload"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={uploadingFile}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer flex flex-col items-center"
-                >
-                  {uploadingFile ? (
-                    <>
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-3"></div>
-                      <p className="text-gray-600">업로드 중...</p>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-12 h-12 text-gray-400 mb-3" />
-                      <p className="text-gray-600">클릭하여 파일 업로드</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        모든 파일 형식 지원
-                      </p>
-                    </>
-                  )}
-                </label>
+                ))}
               </div>
             )}
+
+            {/* 파일 업로드 영역 */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+              <input
+                type="file"
+                id="file-upload"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploadingFile}
+                multiple
+              />
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer flex flex-col items-center"
+              >
+                {uploadingFile ? (
+                  <>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-3"></div>
+                    <p className="text-gray-600">업로드 중...</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-12 h-12 text-gray-400 mb-3" />
+                    <p className="text-gray-600">
+                      {attachments.length > 0 ? '추가 파일 업로드' : '클릭하여 파일 업로드'}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      모든 파일 형식 지원 (여러 파일 선택 가능)
+                    </p>
+                  </>
+                )}
+              </label>
+            </div>
           </div>
 
           {/* Submit Buttons */}
@@ -337,7 +355,7 @@ export default function BoardFormPage() {
             <li>• 제목은 명확하고 간결하게 작성해주세요.</li>
             <li>• 내용은 자유롭게 작성하되, 상대방을 존중하는 표현을 사용해주세요.</li>
             <li>• 모든 게시글은 연구실 멤버만 확인할 수 있습니다.</li>
-            <li>• 파일을 첨부할 수 있습니다 (모든 형식 지원).</li>
+            <li>• 여러 파일을 첨부할 수 있습니다 (모든 형식 지원).</li>
             <li>• 작성 후 수정 및 삭제가 가능합니다.</li>
           </ul>
         </motion.div>

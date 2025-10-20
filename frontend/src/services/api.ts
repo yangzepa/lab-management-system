@@ -466,30 +466,60 @@ export const boardsApi = {
   },
 };
 
+// Helper function to parse attachments JSON string
+const parseBoardAttachments = (board: any): Board => {
+  console.log('Parsing board attachments:', board.attachments, typeof board.attachments);
+
+  if (board.attachments) {
+    if (typeof board.attachments === 'string') {
+      try {
+        board.attachments = JSON.parse(board.attachments);
+        console.log('Parsed attachments:', board.attachments);
+      } catch (e) {
+        console.error('Failed to parse attachments:', e, board.attachments);
+        board.attachments = [];
+      }
+    }
+  } else {
+    // attachments가 없으면 빈 배열로 초기화
+    board.attachments = [];
+  }
+
+  return board;
+};
+
 // User Boards API
 export const userBoardsApi = {
   getAll: async (page = 0, size = 10): Promise<{ content: Board[]; totalPages: number; totalElements: number }> => {
     const response = await api.get('/user/boards', { params: { page, size } });
-    return response.data;
+    const data = response.data;
+    if (data.content) {
+      data.content = data.content.map(parseBoardAttachments);
+    }
+    return data;
   },
   getById: async (id: number): Promise<Board> => {
     const response = await api.get(`/user/boards/${id}`);
-    return response.data;
+    return parseBoardAttachments(response.data);
   },
-  create: async (data: { title: string; content: string; isPublic: boolean; imageUrl?: string }): Promise<Board> => {
+  create: async (data: { title: string; content: string; isPublic: boolean; imageUrl?: string; attachmentName?: string; attachments?: string }): Promise<Board> => {
     const response = await api.post<ApiResponse<Board>>('/user/boards', data);
-    return response.data.data;
+    return parseBoardAttachments(response.data.data);
   },
-  update: async (id: number, data: { title: string; content: string; isPublic: boolean; imageUrl?: string }): Promise<Board> => {
+  update: async (id: number, data: { title: string; content: string; isPublic: boolean; imageUrl?: string; attachmentName?: string; attachments?: string }): Promise<Board> => {
     const response = await api.put<ApiResponse<Board>>(`/user/boards/${id}`, data);
-    return response.data.data;
+    return parseBoardAttachments(response.data.data);
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/user/boards/${id}`);
   },
   search: async (keyword: string, page = 0, size = 10): Promise<{ content: Board[]; totalPages: number; totalElements: number }> => {
     const response = await api.get('/user/boards/search', { params: { keyword, page, size } });
-    return response.data;
+    const data = response.data;
+    if (data.content) {
+      data.content = data.content.map(parseBoardAttachments);
+    }
+    return data;
   },
   getComments: async (boardId: number): Promise<BoardComment[]> => {
     const response = await api.get(`/user/boards/${boardId}/comments`);

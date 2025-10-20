@@ -157,7 +157,26 @@ export default function KanbanBoard({ projectId }: Props) {
     if (!over) return;
 
     const taskId = Number(active.id);
-    const newStatus = over.id as Task['status'];
+    let newStatus: Task['status'];
+
+    // Determine the target status
+    // If dropped on a column, over.id will be the column id (string)
+    // If dropped on a task, over.id will be the task id (number)
+    const validStatuses: Task['status'][] = ['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED'];
+
+    if (typeof over.id === 'string' && validStatuses.includes(over.id as Task['status'])) {
+      // Dropped on column
+      newStatus = over.id as Task['status'];
+    } else {
+      // Dropped on another task - find that task's status
+      const targetTask = tasks.find((t) => t.id === Number(over.id));
+      if (!targetTask) {
+        console.error('Target task not found:', over.id);
+        return;
+      }
+      newStatus = targetTask.status;
+    }
+
     const task = tasks.find((t) => t.id === taskId);
 
     if (!task || task.status === newStatus) return;
@@ -168,7 +187,23 @@ export default function KanbanBoard({ projectId }: Props) {
     );
 
     try {
-      await userApi.updateTask(projectId, taskId, { status: newStatus });
+      // Send full task data with updated status
+      const updateData: any = {
+        name: task.name,
+        status: newStatus,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        estimatedHours: task.estimatedHours,
+        projectId: projectId,
+        assigneeIds: task.assignees?.map(a => a.id) || []
+      };
+
+      // Only include description if it's not empty
+      if (task.description && task.description.trim() !== '') {
+        updateData.description = task.description;
+      }
+
+      await userApi.updateTask(projectId, taskId, updateData);
     } catch (error) {
       console.error('Failed to update task:', error);
       alert('태스크 상태 변경에 실패했습니다.');

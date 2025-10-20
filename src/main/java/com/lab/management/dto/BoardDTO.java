@@ -17,6 +17,7 @@ public class BoardDTO {
     private String imageUrl;
     private String attachmentUrl;
     private String attachmentName;
+    private String attachments; // JSON 배열
     private Long authorId;
     private String authorName;
     private Integer viewCount;

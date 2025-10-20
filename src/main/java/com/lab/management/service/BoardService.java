@@ -79,6 +79,7 @@ public class BoardService {
                 .imageUrl(request.getImageUrl())
                 .attachmentUrl(request.getAttachmentUrl())
                 .attachmentName(request.getAttachmentName())
+                .attachments(request.getAttachments())
                 .author(author)
                 .viewCount(0)
                 .build();
@@ -112,6 +113,7 @@ public class BoardService {
         board.setImageUrl(request.getImageUrl());
         board.setAttachmentUrl(request.getAttachmentUrl());
         board.setAttachmentName(request.getAttachmentName());
+        board.setAttachments(request.getAttachments());
 
         Board updatedBoard = boardRepository.save(board);
         return convertToDTO(updatedBoard);
@@ -151,6 +153,7 @@ public class BoardService {
         board.setImageUrl(request.getImageUrl());
         board.setAttachmentUrl(request.getAttachmentUrl());
         board.setAttachmentName(request.getAttachmentName());
+        board.setAttachments(request.getAttachments());
 
         Board updatedBoard = boardRepository.save(board);
         return convertToDTO(updatedBoard);
@@ -269,6 +272,7 @@ public class BoardService {
         dto.setImageUrl(board.getImageUrl());
         dto.setAttachmentUrl(board.getAttachmentUrl());
         dto.setAttachmentName(board.getAttachmentName());
+        dto.setAttachments(board.getAttachments());
         dto.setAuthorId(board.getAuthor().getId());
         dto.setAuthorName(board.getAuthor().getName());
         dto.setViewCount(board.getViewCount());
