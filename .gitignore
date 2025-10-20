@@ -1,0 +1,70 @@
+# Java / Spring Boot
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+
+# Logs
+logs/
+*.log
+spring.log
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/package-lock.json
+
+# Uploads
+uploads/
+*.tmp
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Backups and temporary files
+backup/
+backups/
+ExportBlock*/
+*.bat
+*.sh
+nginx/
+ssl/
+certs/
+
+# Sensitive data files
+insert_notices.sql
+src/main/resources/data.sql.production
+*.sql.backup
+lab_policy.md
+notice_*.md

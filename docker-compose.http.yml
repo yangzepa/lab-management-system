@@ -1,0 +1,88 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: lab-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --init-connect=SET NAMES utf8mb4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: lab_management
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - lab-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lab-management-app
+    restart: unless-stopped
+    expose:
+      - "8080"
+    volumes:
+      - uploads-data:/app/uploads
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/lab_management?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      JWT_SECRET: ${JWT_SECRET:-your-production-secret-key-change-this-to-something-very-secure-and-long}
+      JWT_EXPIRATION: 86400000
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - lab-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/public/lab/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: lab-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - lab-network
+    depends_on:
+      - app
+
+  nginx:
+    image: nginx:alpine
+    container_name: lab-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf.http:/etc/nginx/conf.d/default.conf:ro
+      - /var/log/nginx:/var/log/nginx
+    networks:
+      - lab-network
+    depends_on:
+      - app
+      - frontend
+
+volumes:
+  mysql-data:
+    driver: local
+  uploads-data:
+    driver: local
+
+networks:
+  lab-network:
+    driver: bridge

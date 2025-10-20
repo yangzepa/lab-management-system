@@ -1,0 +1,11 @@
+**/.git
+**/.gradle
+**/build
+**/target
+**/*.iml
+**/.idea
+**/.vscode
+**/.DS_Store
+**/node_modules
+**/.env
+**/logs
