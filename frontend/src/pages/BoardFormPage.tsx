@@ -64,13 +64,6 @@ export default function BoardFormPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 파일 크기 제한 (10MB)
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert('파일 크기는 10MB를 초과할 수 없습니다.');
-      return;
-    }
-
     try {
       setUploadingFile(true);
 
@@ -292,7 +285,7 @@ export default function BoardFormPage() {
                       <Upload className="w-12 h-12 text-gray-400 mb-3" />
                       <p className="text-gray-600">클릭하여 파일 업로드</p>
                       <p className="text-sm text-gray-500 mt-1">
-                        모든 파일 형식 지원 (최대 10MB)
+                        모든 파일 형식 지원
                       </p>
                     </>
                   )}
@@ -344,7 +337,7 @@ export default function BoardFormPage() {
             <li>• 제목은 명확하고 간결하게 작성해주세요.</li>
             <li>• 내용은 자유롭게 작성하되, 상대방을 존중하는 표현을 사용해주세요.</li>
             <li>• 모든 게시글은 연구실 멤버만 확인할 수 있습니다.</li>
-            <li>• 파일을 첨부할 수 있습니다 (최대 10MB, 모든 형식 지원).</li>
+            <li>• 파일을 첨부할 수 있습니다 (모든 형식 지원).</li>
             <li>• 작성 후 수정 및 삭제가 가능합니다.</li>
           </ul>
         </motion.div>
